@@ -109,27 +109,29 @@ def main(base_dir=None):
     # Split PlantVillage 80/20
     train_df, val_df = train_test_split(pv_df, test_size=0.2, stratify=pv_df['label'], random_state=42)
     
-    # Load PlantDoc data (Test ONLY)
+    # Load PlantDoc data (Test ONLY, but pulling from all PlantDoc splits)
     pd_data = []
-    test_dir = pd_root / "test"
-    img_dir = test_dir / "images"
-    lbl_dir = test_dir / "labels"
     
-    if not img_dir.exists() or not lbl_dir.exists():
-        raise FileNotFoundError(f"PlantDoc test directories missing at {test_dir}")
+    for split_name in ["train", "valid", "test"]:
+        split_dir = pd_root / split_name
+        img_dir = split_dir / "images"
+        lbl_dir = split_dir / "labels"
         
-    for img_file in img_dir.iterdir():
-        if img_file.suffix in extensions:
-            lbl_file = lbl_dir / (img_file.stem + ".txt")
-            if lbl_file.exists():
-                with open(lbl_file, 'r') as lf:
-                    lines = lf.readlines()
-                    if lines:
-                        # Taking the first bounding box class as the image class for simplicity
-                        class_id = int(lines[0].split()[0])
-                        if class_id in pd_id_to_pv:
-                            pv_cls_name = pd_id_to_pv[class_id]
-                            pd_data.append({"image_path": str(img_file.absolute()), "label": pv_cls_name})
+        if not img_dir.exists() or not lbl_dir.exists():
+            continue
+            
+        for img_file in img_dir.iterdir():
+            if img_file.suffix in extensions:
+                lbl_file = lbl_dir / (img_file.stem + ".txt")
+                if lbl_file.exists():
+                    with open(lbl_file, 'r') as lf:
+                        lines = lf.readlines()
+                        if lines:
+                            # Taking the first bounding box class as the image class for simplicity
+                            class_id = int(lines[0].split()[0])
+                            if class_id in pd_id_to_pv:
+                                pv_cls_name = pd_id_to_pv[class_id]
+                                pd_data.append({"image_path": str(img_file.absolute()), "label": pv_cls_name})
                                         
     test_df = pd.DataFrame(pd_data)
     if test_df.empty:
@@ -146,7 +148,7 @@ def main(base_dir=None):
     print(f"Total Shared Classes: {len(CLASS_MAPPING)}")
     print(f"Train Manifest: {len(train_df)} images")
     print(f"Val Manifest:   {len(val_df)} images")
-    print(f"Test Manifest:  {len(test_df)} images (from PlantDoc test set only)\n")
+    print(f"Test Manifest:  {len(test_df)} images (from PlantDoc all splits)\n")
     
     print("--- Sample Rows (Train) ---")
     print(train_df.head(3))
