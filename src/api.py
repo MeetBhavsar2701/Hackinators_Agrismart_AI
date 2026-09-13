@@ -3,15 +3,25 @@ import tempfile
 import sys
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-# Add the parent directory to sys.path to import model.predict
+# Add the parent directory and model directory to sys.path
 base_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(base_dir))
+sys.path.insert(0, str(base_dir / "model"))
 
-from model.predict import predict
+from predict import predict
 
 app = FastAPI(title="AgriSmart AI API", description="Crop Disease Prediction API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/predict")
 async def predict_endpoint(file: UploadFile = File(...)):
