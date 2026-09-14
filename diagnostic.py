@@ -16,7 +16,7 @@ def main():
     weights_dir = model_dir / "weights"
     test_manifest = model_dir / "test_manifest.csv"
     mapping_file = weights_dir / "label_mapping.json"
-    weights_file = weights_dir / "best_model.pt"
+    weights_file = weights_dir / "best_model_v2.pt"
 
     with open(mapping_file, 'r') as f:
         idx_to_label = json.load(f)

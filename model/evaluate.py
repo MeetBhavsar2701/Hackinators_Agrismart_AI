@@ -43,7 +43,7 @@ def main():
     val_manifest = model_dir / "val_manifest.csv"
     test_manifest = model_dir / "test_manifest.csv"
     mapping_file = weights_dir / "label_mapping.json"
-    weights_file = weights_dir / "best_model.pt"
+    weights_file = weights_dir / "best_model_v2.pt"
     
     if not mapping_file.exists() or not weights_file.exists():
         raise FileNotFoundError("Model weights or label mapping not found. Run train.py first.")
