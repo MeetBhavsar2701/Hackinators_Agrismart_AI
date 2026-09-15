@@ -36,7 +36,7 @@ class CropDiseaseDataset(Dataset):
             image_np = augmented['image']
             
         # Convert HWC numpy to CHW tensor and normalize to [0,1]
-        image_tensor = torch.from_numpy(image_np).permute(2, 0, 1).float() / 255.0
+        image_tensor = torch.from_numpy(image_np).permute(2, 0, 1).float()
         
         label_idx = self.label_to_idx[label_str]
         return image_tensor, torch.tensor(label_idx, dtype=torch.long)

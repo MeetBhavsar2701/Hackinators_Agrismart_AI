@@ -42,7 +42,7 @@ def main():
             img = Image.open(row['image_path']).convert('RGB')
             img_np = np.array(img)
             img_np = transform(image=img_np)['image']
-            tensor = torch.from_numpy(img_np).permute(2, 0, 1).float() / 255.0
+            tensor = torch.from_numpy(img_np).permute(2, 0, 1).float()
             tensor = tensor.unsqueeze(0).to(device)
             out = model(tensor)
             pred_idx = torch.argmax(out, dim=1).item()
@@ -61,7 +61,7 @@ def main():
         img = Image.open(row['image_path']).convert('RGB')
         img_np = np.array(img)
         t_img = transform(image=img_np)['image']
-        tensor = torch.from_numpy(t_img).permute(2, 0, 1).float() / 255.0
+        tensor = torch.from_numpy(t_img).permute(2, 0, 1).float()
         tensor = tensor.unsqueeze(0).to(device)
         
         with torch.no_grad():

@@ -86,13 +86,10 @@ def predict(image_path: str) -> dict:
     augmented = transform(image=image_np)
     image_np = augmented['image']
     
-    # KNOWN DEFECT (documented in report/model_report.md): get_val_transforms()
-    # already applies A.Normalize(ImageNet), so this extra /255.0 rescales the
-    # input a second time. It is kept because train.py:39 does the same, so the
-    # shipped weights expect this exact scale -- removing it here alone would
-    # break inference. Correct fix = delete in train.py + predict.py +
-    # diagnostic.py AND retrain.
-    image_tensor = torch.from_numpy(image_np).permute(2, 0, 1).float() / 255.0
+    # get_val_transforms() already applies A.Normalize(ImageNet mean/std), so the
+    # array is correctly scaled here. Do NOT divide by 255 again -- doing so
+    # collapsed the previous checkpoint to a constant prediction.
+    image_tensor = torch.from_numpy(image_np).permute(2, 0, 1).float()
     image_tensor = image_tensor.unsqueeze(0).to(device) # Add batch dimension
     
     with torch.no_grad():
