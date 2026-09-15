@@ -70,9 +70,28 @@ The frontend will run at `http://localhost:5173`. Open this link in your browser
 - **Test Set**: Provided PlantDoc-style real-world field-condition images.
 
 **Reported Metrics**:
-- **Validation Set**: Macro-F1: `0.9943`
-- **Field Test Set**: Macro-F1: `0.0690` (Note: Demonstrates expected real-world domain shift from lab conditions, verified via rigorous diagnostic tests).
-*A confusion matrix is available in `report/confusion_matrix.png` and detailed per-class metrics in `report/metrics.json`.*
+- **Validation Set (PlantVillage, lab conditions)**: Macro-F1: `0.9943`
+- **Field Test Set**: Macro-F1: `0.0690`
+
+The field score is **below** the 0.15 F1 PlantVillage→PlantDoc baseline reported
+in the PlantDoc paper. We report it as-is rather than leading with the lab number.
+
+We traced the primary cause to a **verified preprocessing defect**: ImageNet
+normalization is applied in `model/augmentations.py`, and the tensor conversion
+then divides by 255 a second time (`model/train.py:39`, `model/predict.py:90`,
+`diagnostic.py:45`). This is consistent across training and inference — which is
+why lab validation still converged — but it neutralises the ImageNet pretrained
+features and drives the field-set collapse. The fix is identified but requires
+retraining, which we could not complete within the submission window. The
+existing weights and preprocessing are left intact and mutually consistent.
+
+Full analysis: **[`report/model_report.md`](report/model_report.md)**.
+
+> **Confusion matrix and per-class metrics are not included.** `model/evaluate.py`
+> generates them, but it requires the dataset manifests and raw images, which are
+> not vendored in this repository. We chose not to publish reconstructed numbers.
+> To regenerate: `python model/prepare_data.py && python model/evaluate.py`
+> (writes `report/metrics.json` and `report/confusion_matrix.png`).
 
 ---
 
@@ -83,6 +102,20 @@ The frontend will run at `http://localhost:5173`. Open this link in your browser
 - **Database**: SQLite3 built-in to Python (Zero configuration required!).
 - **AI/ML**: PyTorch, Torchvision (EfficientNet-B0), Albumentations for robust field-condition augmentations.
 
+## 📄 Originality Declaration
+
+- All work in this repository was committed between **10–15 September 2026**.
+- **Datasets:** PlantVillage (Hughes & Salathé, 2015 — https://github.com/spMohanty/PlantVillage-Dataset)
+  and PlantDoc (Singh et al., CODS-COMAD 2020 — https://github.com/pratikkayal/PlantDoc-Dataset).
+- **Pretrained backbone:** EfficientNet-B0 ImageNet weights via `torchvision`.
+- **Open-source libraries:** PyTorch, torchvision, Albumentations, scikit-learn,
+  FastAPI, Uvicorn, React, Vite, Tailwind CSS, axios, react-router-dom.
+- **Baseline reference:** the 0.15 F1 PlantVillage→PlantDoc figure cited above is
+  from the PlantDoc paper (arXiv:1911.10317); it is quoted for comparison only.
+- No public notebook or third-party solution was copied wholesale. Training,
+  evaluation, inference, API, and frontend code in this repository were written
+  by the team. AI coding assistants were used during development.
+
 ## 🔗 Submission Links
-- **Demo Video**: [Link to YouTube Demo]
-- **Deployed App**: [Link to Live App]
+- **Demo Video**: _(not yet recorded — to be added before submission)_
+- **Deployed App**: _(not deployed — runs locally via the instructions above)_

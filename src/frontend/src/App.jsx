@@ -26,7 +26,7 @@ function Header() {
         <div className="flex items-center gap-space-md">
           <div className="flex items-center gap-space-xs bg-secondary-container text-on-secondary-container px-space-md py-space-xs rounded-full font-label-md text-label-md">
             <span className="material-symbols-outlined text-[18px]">call</span>
-            <span>Helpline 1800-FARM-AI</span>
+            <span>Kisan Call Centre 1800-180-1551</span>
           </div>
           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center border border-on-primary/20">
             <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>

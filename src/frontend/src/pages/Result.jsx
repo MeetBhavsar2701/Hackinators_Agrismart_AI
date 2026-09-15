@@ -156,10 +156,13 @@ export default function Result() {
             <p className="font-body-sm text-on-primary-container mb-4">
               {expert ? expert.overview : `Have questions about this ${result.class_label.replace(/___/g, ' ')} diagnosis?`}
             </p>
-            <button className="w-full py-2 bg-on-primary-container text-primary-container rounded-lg font-label-md flex justify-center items-center gap-2 hover:opacity-90">
-              <span className="material-symbols-outlined">chat</span>
-              Chat with AI
-            </button>
+            <a
+              href="tel:18001801551"
+              className="w-full py-2 bg-on-primary-container text-primary-container rounded-lg font-label-md flex justify-center items-center gap-2 hover:opacity-90"
+            >
+              <span className="material-symbols-outlined">call</span>
+              Talk to an expert (1800-180-1551)
+            </a>
           </div>
         </div>
 

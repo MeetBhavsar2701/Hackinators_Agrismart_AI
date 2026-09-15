@@ -164,7 +164,7 @@ def main():
         
         if val_f1 > best_val_f1:
             best_val_f1 = val_f1
-            torch.save(model.state_dict(), weights_dir / "best_model_v2.pt")
+            torch.save(model.state_dict(), weights_dir / "best_model.pt")
             
             # Save label mapping alongside the model
             import json

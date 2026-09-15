@@ -38,6 +38,7 @@ async def predict_endpoint(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
         
+    temp_path = None
     try:
         # Save uploaded file to a temporary file
         fd, temp_path = tempfile.mkstemp(suffix=Path(file.filename).suffix)
@@ -64,7 +65,7 @@ async def predict_endpoint(file: UploadFile = File(...)):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if os.path.exists(temp_path):
+        if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
 @app.get("/history")
@@ -89,4 +90,6 @@ def expert_endpoint(req: AdviceRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+    # reload=False: the reloader subprocess does not inherit the sys.path
+    # entries set above, which breaks the model/ and src/ imports.
+    uvicorn.run(app, host="0.0.0.0", port=8000)
