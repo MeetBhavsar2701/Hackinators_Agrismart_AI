@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
 import Upload from './pages/Upload'
 import Result from './pages/Result'
+import History from './pages/History'
 
 function Header() {
   const location = useLocation();
@@ -58,6 +59,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Upload />} />
           <Route path="/result" element={<Result />} />
+          <Route path="/history" element={<History />} />
         </Routes>
       </main>
       <Footer />

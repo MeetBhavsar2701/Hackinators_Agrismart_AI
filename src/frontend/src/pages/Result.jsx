@@ -1,10 +1,37 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function Result() {
   const location = useLocation();
   const navigate = useNavigate();
   const { result, crop, preview } = location.state || {};
+  
+  const [irrigation, setIrrigation] = useState(null);
+  const [expert, setExpert] = useState(null);
+
+  useEffect(() => {
+    if (result && result.class_label) {
+      // Fetch irrigation advice
+      fetch('http://localhost:8000/irrigation-advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_label: result.class_label })
+      })
+      .then(res => res.json())
+      .then(data => setIrrigation(data))
+      .catch(err => console.error(err));
+
+      // Fetch expert advice
+      fetch('http://localhost:8000/expert-advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_label: result.class_label })
+      })
+      .then(res => res.json())
+      .then(data => setExpert(data))
+      .catch(err => console.error(err));
+    }
+  }, [result]);
 
   if (!result) {
     return (
@@ -80,44 +107,54 @@ export default function Result() {
               <span className="material-symbols-outlined text-tertiary">medical_services</span>
               Prescribed Treatment
             </h2>
-            <p className="font-body-lg text-on-surface-variant">
+            <p className="font-body-lg text-on-surface-variant mb-4">
               {result.precaution}
             </p>
+            {expert && expert.action_plan && (
+              <div className="mt-4">
+                <h3 className="font-headline-sm text-on-surface mb-2">Detailed Action Plan:</h3>
+                <ul className="list-disc pl-5 font-body-md text-on-surface-variant space-y-1">
+                  {expert.action_plan.map((step, idx) => (
+                    <li key={idx}>{step}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column: Bonus Modules (Mocked for now) */}
+        {/* Right Column: Bonus Modules */}
         <div className="lg:col-span-4 flex flex-col gap-space-md">
-          {/* TODO: verify once bonus-modules branch is merged - Wire real irrigation_advisor.py endpoint */}
+          {/* Irrigation Tip */}
           <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
             <h3 className="font-headline-sm text-primary flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-[#0ea5e9]">water_drop</span>
               Irrigation Tip
             </h3>
             <p className="font-body-md text-on-surface-variant">
-              Maintain soil moisture between 60-70%. Avoid overhead watering to prevent fungal spread.
+              {irrigation ? irrigation.advice : "Loading specific irrigation advice..."}
             </p>
           </div>
 
-          {/* TODO: verify once bonus-modules branch is merged - Wire real weather module */}
+          {/* Weather Note (Based on synthetic generated conditions in irrigation module) */}
           <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
             <h3 className="font-headline-sm text-primary flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-[#f59e0b]">partly_cloudy_day</span>
-              Weather Note
+              Current Conditions
             </h3>
             <p className="font-body-md text-on-surface-variant">
-              High humidity expected over the next 48 hours. Ensure adequate canopy airflow.
+              {irrigation ? `Temperature: ${irrigation.temperature}°C, Humidity: ${irrigation.humidity}%` : "Loading current field conditions..."}
             </p>
           </div>
 
-          {/* TODO: verify once bonus-modules branch is merged - Wire real farmer_assistant.py chat interface */}
+          {/* Assistant overview */}
           <div className="bg-primary-container rounded-xl p-space-md shadow-sm mt-4">
             <h3 className="font-headline-sm text-on-primary-container flex items-center gap-2 mb-2">
               <span className="material-symbols-outlined">smart_toy</span>
               Ask the Assistant
             </h3>
             <p className="font-body-sm text-on-primary-container mb-4">
-              Have questions about this {result.class_label.replace(/___/g, ' ')} diagnosis?
+              {expert ? expert.overview : `Have questions about this ${result.class_label.replace(/___/g, ' ')} diagnosis?`}
             </p>
             <button className="w-full py-2 bg-on-primary-container text-primary-container rounded-lg font-label-md flex justify-center items-center gap-2 hover:opacity-90">
               <span className="material-symbols-outlined">chat</span>
