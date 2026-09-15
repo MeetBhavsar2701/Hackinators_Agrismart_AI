@@ -321,7 +321,7 @@ labelled "Simulated — not a real sensor" everywhere it appears.
 
 ## 🎥 Demo & deployment
 
-- **Demo video:** _to be added before submission_
+- **Demo video:** https://youtu.be/FkwcYvQ1EDE?si=WkmMIHKeA4alIGmp
 - **Deployed app:** not deployed — runs locally via the instructions above
 
 ---
