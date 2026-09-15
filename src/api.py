@@ -12,7 +12,7 @@ base_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(base_dir))
 sys.path.insert(0, str(base_dir / "model"))
 
-from model.predict import predict
+from model.predict import predict_details
 from src.database import save_prediction, get_history
 from src.irrigation_advisor import get_irrigation_advice
 from src.farmer_assistant import get_expert_advice
@@ -65,7 +65,7 @@ async def predict_endpoint(file: UploadFile = File(...)):
             buffer.write(await file.read())
             
         # Run prediction
-        result = predict(temp_path)
+        result = predict_details(temp_path)
         
         # Save to history DB
         save_prediction(

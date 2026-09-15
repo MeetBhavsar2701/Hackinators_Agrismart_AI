@@ -55,10 +55,11 @@ pip install -r requirements.txt
 ### 2. Run the core task (this alone satisfies §4.1)
 
 ```bash
-python model/predict.py --image samples/lab_tomato_early_blight.jpg
+python predict.py --image samples/lab_tomato_early_blight.jpg
 ```
 
-```json
+```
+Tomato___Early_blight
 {
     "class_label": "Tomato___Early_blight",
     "confidence": 0.9927,
@@ -66,12 +67,23 @@ python model/predict.py --image samples/lab_tomato_early_blight.jpg
 }
 ```
 
-The Python API required by §4.1 is `predict(image_path) -> dict`:
+Add `--quiet` to print only the class label:
+
+```bash
+python predict.py --image samples/lab_potato_late_blight.jpg --quiet   # Potato___Late_blight
+```
+
+The Python interface required by §4.1 is `predict(image_path) -> class_label`,
+returning a plain string:
 
 ```python
 from model.predict import predict
-predict("samples/lab_potato_late_blight.jpg")["class_label"]   # 'Potato___Late_blight'
+predict("samples/lab_potato_late_blight.jpg")        # 'Potato___Late_blight'
 ```
+
+`predict_details(image_path)` returns the full `dict` with confidence and
+precaution — that is what the web API uses. Both `python predict.py` and
+`python model/predict.py` work identically.
 
 ### 3. Run the web app
 

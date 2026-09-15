@@ -75,7 +75,22 @@ def load_model_and_config():
     
     return model, idx_to_label, temperature, device
 
-def predict(image_path: str) -> dict:
+def predict(image_path: str) -> str:
+    """Submission interface — Problem Statement section 4.1.
+
+        predict(image_path) -> class_label
+
+    Loads the trained weights and runs on a single new image with no manual
+    steps, returning the predicted class label as a plain string.
+
+    Use predict_details() when the confidence score and precautionary text are
+    also needed (the web API does).
+    """
+    return predict_details(image_path)["class_label"]
+
+
+def predict_details(image_path: str) -> dict:
+    """Full prediction: class_label, confidence, precaution."""
     model, idx_to_label, temperature, device = load_model_and_config()
     
     # Load and preprocess image
@@ -115,13 +130,19 @@ def predict(image_path: str) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Predict crop disease from an image.")
     parser.add_argument('--image', type=str, required=True, help='Path to the leaf image')
+    parser.add_argument('--quiet', action='store_true',
+                        help='Print only the predicted class label')
     args = parser.parse_args()
     
     try:
-        result = predict(args.image)
-        print(json.dumps(result, indent=4))
+        result = predict_details(args.image)
+        # Section 4.1: the CLI must print the predicted class.
+        print(result["class_label"])
+        if not args.quiet:
+            print(json.dumps(result, indent=4))
     except Exception as e:
         print(json.dumps({"error": str(e)}, indent=4))
+        raise SystemExit(1)
 
 if __name__ == "__main__":
     main()
