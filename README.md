@@ -69,29 +69,49 @@ The frontend will run at `http://localhost:5173`. Open this link in your browser
 - **Training/Validation**: PlantVillage dataset (lab-condition leaf images, uniform background).
 - **Test Set**: Provided PlantDoc-style real-world field-condition images.
 
-**Reported Metrics**:
-- **Validation Set (PlantVillage, lab conditions)**: Macro-F1: `0.9943`
-- **Field Test Set**: Macro-F1: `0.0690`
+**Reported Metrics** (current model, measured — see [`report/model_report.md`](report/model_report.md)):
 
-The field score is **below** the 0.15 F1 PlantVillage→PlantDoc baseline reported
-in the PlantDoc paper. We report it as-is rather than leading with the lab number.
+| Split | Metric | Value |
+|---|---|---|
+| Held-out validation (PlantVillage, lab) | Macro-F1 | **0.9005** |
+| Held-out validation (PlantVillage, lab) | Accuracy | **0.9037** (135 images) |
+| Lab spot check | Correct | **12/12** |
+| Field spot check (PlantDoc) | Distinct classes predicted | **10** of 27, confidence 0.24–0.85 |
 
-We traced the primary cause to a **verified preprocessing defect**: ImageNet
-normalization is applied in `model/augmentations.py`, and the tensor conversion
-then divides by 255 a second time (`model/train.py:39`, `model/predict.py:90`,
-`diagnostic.py:45`). This is consistent across training and inference — which is
-why lab validation still converged — but it neutralises the ImageNet pretrained
-features and drives the field-set collapse. The fix is identified but requires
-retraining, which we could not complete within the submission window. The
-existing weights and preprocessing are left intact and mutually consistent.
+Field-set macro-F1 is **not** formally reported: we do not have the organisers'
+held-out set, and a 12-image spot check is too small to quote as a metric. We
+would rather report nothing than a number we cannot stand behind.
 
-Full analysis: **[`report/model_report.md`](report/model_report.md)**.
+### A defect we found and fixed
+
+The earlier checkpoint in this repository was **completely broken** and we are
+documenting it rather than quietly replacing it.
+
+`model/augmentations.py` applies `A.Normalize(ImageNet)`, and the tensor
+conversion then divided by 255 **again**, crushing every input to roughly
+`[-0.008, +0.010]`. The network received a near-black frame for every image and
+learned to emit a constant answer. Verified: an all-black rectangle and a real
+diseased tomato leaf both returned `Soybean___healthy` at `0.9943`. It scored
+**0/12 on lab images and 0/12 on field images**, with **one** distinct
+prediction across 24 test images. The previously reported 0.9943 validation
+macro-F1 was not reproducible from the committed weights.
+
+Reproduce the failure mode yourself, no dataset needed:
+
+```bash
+python report/verify_model.py
+```
+
+**The fix:** removed the duplicate `/255` in `predict.py`, `train.py` and
+`diagnostic.py`, then retrained the classifier head on 675 PlantVillage images
+(25 × 27 classes) over a frozen ImageNet EfficientNet-B0 backbone with correct
+normalization. `temperature.json` was reset to 1.0 — the old 1.499 was fitted
+against the dead model.
 
 > **Confusion matrix and per-class metrics are not included.** `model/evaluate.py`
-> generates them, but it requires the dataset manifests and raw images, which are
-> not vendored in this repository. We chose not to publish reconstructed numbers.
-> To regenerate: `python model/prepare_data.py && python model/evaluate.py`
-> (writes `report/metrics.json` and `report/confusion_matrix.png`).
+> generates them but needs the dataset manifests and raw images, which are not
+> vendored here. To regenerate:
+> `python model/prepare_data.py && python model/evaluate.py`
 
 ---
 

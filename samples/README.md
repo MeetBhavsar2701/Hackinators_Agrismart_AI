@@ -1,22 +1,44 @@
-# Sample image
+# Sample images
 
-`tomato_early_blight_field.jpg` — one real field-condition leaf photo, included so
-that `predict.py` can be run immediately without downloading a dataset.
+Drop any of these into the web app, or pass them to `predict.py`.
 
-| | |
+## Lab images — PlantVillage (use these for the demo)
+
+The model classifies all five correctly.
+
+| File | Ground truth | Model output |
+|---|---|---|
+| `lab_tomato_early_blight.jpg` | Tomato — Early blight | `Tomato___Early_blight` ✓ |
+| `lab_potato_late_blight.jpg` | Potato — Late blight | `Potato___Late_blight` ✓ |
+| `lab_grape_black_rot.jpg` | Grape — Black rot | `Grape___Black_rot` ✓ |
+| `lab_corn_common_rust.jpg` | Corn — Common rust | `Corn_(maize)___Common_rust_` ✓ |
+| `lab_tomato_healthy.jpg` | Tomato — healthy | `Tomato___healthy` ✓ |
+
+Source: [PlantVillage-Dataset](https://github.com/spMohanty/PlantVillage-Dataset)
+(Hughes & Salathé, 2015), `raw/color/`.
+
+## Field image — PlantDoc (use this to show the honest limitation)
+
+| File | Ground truth |
 |---|---|
-| **Source** | [PlantDoc-Dataset](https://github.com/pratikkayal/PlantDoc-Dataset), `test/Tomato Early blight leaf/` |
-| **Ground truth** | Tomato — Early blight |
-| **Expected model label** | `Tomato___Early_blight` |
-| **Citation** | Singh et al., *PlantDoc: A Dataset for Visual Plant Disease Detection*, CODS-COMAD 2020 (arXiv:1911.10317) |
+| `tomato_early_blight_field.jpg` | Tomato — Early blight |
 
-This is a **field-condition** image, i.e. from the domain where our model scores
-0.0690 macro-F1. A wrong prediction here is consistent with the limitation
-documented in [`../report/model_report.md`](../report/model_report.md) and is not
-a bug in the inference code.
+Source: [PlantDoc-Dataset](https://github.com/pratikkayal/PlantDoc-Dataset)
+`test/Tomato Early blight leaf/` — Singh et al., CODS-COMAD 2020 (arXiv:1911.10317).
 
-Run:
+This is a real-world field photo: cluttered background, natural lighting. The
+model is trained on lab images only, so accuracy here is much lower and
+confidence is correspondingly lower. That gap is the point of the challenge and
+is documented in [`../report/model_report.md`](../report/model_report.md).
+
+## Run from the CLI
 
 ```bash
-python model/predict.py --image samples/tomato_early_blight_field.jpg
+python model/predict.py --image samples/lab_tomato_early_blight.jpg
 ```
+
+## More images
+
+Every class is available from the two dataset repositories linked above. For the
+27 classes this model knows, see
+[`../model/weights/label_mapping.json`](../model/weights/label_mapping.json).
