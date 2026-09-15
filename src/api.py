@@ -33,6 +33,23 @@ class AdviceRequest(BaseModel):
     temperature: float = None
     humidity: float = None
 
+@app.get("/health")
+def health_endpoint():
+    """Real readiness check: reports whether the weights file is actually on disk."""
+    weights = base_dir / "model" / "weights" / "best_model.pt"
+    mapping = base_dir / "model" / "weights" / "label_mapping.json"
+    num_classes = None
+    if mapping.exists():
+        import json as _json
+        with open(mapping) as f:
+            num_classes = len(_json.load(f))
+    return {
+        "status": "ok" if weights.exists() else "weights_missing",
+        "model": "EfficientNet-B0",
+        "num_classes": num_classes,
+    }
+
+
 @app.post("/predict")
 async def predict_endpoint(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):

@@ -13,13 +13,18 @@ def get_irrigation_advice(class_label: str, temperature: float = None, humidity:
     is_healthy = "healthy" in disease.lower()
     is_fungal = any(f in disease.lower() for f in ["blight", "mold", "rot", "spot", "mildew", "rust", "scab"])
     
-    # Generate synthetic metrics if not provided (typical growing season values)
+    # Simulated sensor feed (Bonus F). No real sensor or weather API is connected,
+    # so these are randomly sampled from typical growing-season ranges. The
+    # `simulated` flag below tells the UI to label them as such -- they must never
+    # be presented to a farmer as a real measurement.
+    simulated = temperature is None or humidity is None
     if temperature is None:
         temperature = round(random.uniform(22.0, 32.0), 1)
     if humidity is None:
         humidity = round(random.uniform(40.0, 85.0), 1)
-        
-    advice = f"Current field conditions: Temp {temperature}°C, Humidity {humidity}%.\n\n"
+
+    source = "Simulated sensor feed" if simulated else "Values you provided"
+    advice = f"{source}: Temp {temperature}°C, Humidity {humidity}%.\n\n"
     
     if is_healthy:
         if humidity > 80:
@@ -50,5 +55,6 @@ def get_irrigation_advice(class_label: str, temperature: float = None, humidity:
         "crop": crop,
         "temperature": temperature,
         "humidity": humidity,
+        "simulated": simulated,
         "advice": advice
     }

@@ -136,15 +136,26 @@ export default function Result() {
             </p>
           </div>
 
-          {/* Weather Note (Based on synthetic generated conditions in irrigation module) */}
+          {/* Simulated sensor feed (Bonus F) -- explicitly labelled, never shown as a real reading */}
           <div className="bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
-            <h3 className="font-headline-sm text-primary flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-[#f59e0b]">partly_cloudy_day</span>
-              Current Conditions
+            <h3 className="font-headline-sm text-primary flex items-center gap-2 mb-1">
+              <span className="material-symbols-outlined text-[#f59e0b]">sensors</span>
+              Field Conditions
             </h3>
-            <p className="font-body-md text-on-surface-variant">
-              {irrigation ? `Temperature: ${irrigation.temperature}°C, Humidity: ${irrigation.humidity}%` : "Loading current field conditions..."}
-            </p>
+            {irrigation ? (
+              <>
+                {irrigation.simulated && (
+                  <span className="inline-block mb-2 px-2 py-0.5 rounded-full bg-tertiary-container text-on-tertiary-container font-label-sm text-label-sm">
+                    Simulated — not a real sensor
+                  </span>
+                )}
+                <p className="font-body-md text-on-surface-variant">
+                  Temperature: {irrigation.temperature}°C, Humidity: {irrigation.humidity}%
+                </p>
+              </>
+            ) : (
+              <p className="font-body-md text-on-surface-variant">Loading…</p>
+            )}
           </div>
 
           {/* Assistant overview */}
