@@ -27,9 +27,20 @@ def init_db():
     conn.commit()
     conn.close()
 
+def _connect():
+    """Open a connection, ensuring the schema exists.
+
+    init_db() alone only runs at import time, so a database deleted or never
+    created while the server is running would 500 forever. Every caller goes
+    through here instead.
+    """
+    init_db()
+    return sqlite3.connect(DB_PATH)
+
+
 def save_prediction(image_filename, class_label, confidence, precaution):
     """Saves a prediction result to the history database."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     cursor = conn.cursor()
     
     timestamp = datetime.now().isoformat()
@@ -47,7 +58,7 @@ def save_prediction(image_filename, class_label, confidence, precaution):
 
 def get_history(limit=50):
     """Retrieves the most recent predictions from the history database."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     

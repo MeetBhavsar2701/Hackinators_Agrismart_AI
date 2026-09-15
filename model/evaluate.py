@@ -1,125 +1,121 @@
-import json
+"""
+Evaluate the shipped checkpoint on the held-out PlantVillage validation split
+and write report/metrics.json + report/confusion_matrix.png.
+
+Run:  python model/evaluate.py --data <dir>
+
+<dir> must contain one subfolder per class, named exactly as in
+model/weights/label_mapping.json. The split is the same deterministic
+80/20 split (seed 0) used for training, so numbers are reproducible.
+"""
 import argparse
-import pandas as pd
-import numpy as np
+import json
 from pathlib import Path
+
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from PIL import Image
+from sklearn.metrics import (classification_report, confusion_matrix,
+                             f1_score, accuracy_score)
+from torchvision import transforms
 from torchvision.models import efficientnet_b0
-from sklearn.metrics import f1_score, precision_recall_fscore_support, confusion_matrix
-import matplotlib.pyplot as plt
-import seaborn as sns
-from tqdm import tqdm
 
-from train import CropDiseaseDataset
-from augmentations import get_val_transforms
+BASE = Path(__file__).resolve().parent.parent
+WEIGHTS = BASE / "model" / "weights"
 
-def evaluate_model(model, dataloader, device):
-    model.eval()
-    all_preds, all_labels = [], []
-    
-    with torch.no_grad():
-        for images, labels in tqdm(dataloader, desc="Evaluating", leave=False):
-            images = images.to(device)
-            outputs = model(images)
-            preds = torch.argmax(outputs, dim=1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
-            
-    return np.array(all_labels), np.array(all_preds)
+TF = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+])
+
+
+def load_model(n):
+    m = efficientnet_b0()
+    m.classifier[1] = nn.Linear(m.classifier[1].in_features, n)
+    m.load_state_dict(torch.load(WEIGHTS / "best_model.pt", map_location="cpu",
+                                 weights_only=True))
+    m.eval()
+    return m
+
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--tiny_subset', action='store_true')
-    args = parser.parse_args()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", required=True,
+                    help="Directory with one subfolder per class")
+    ap.add_argument("--per-class", type=int, default=25,
+                    help="Images per class to read (must match training)")
+    args = ap.parse_args()
 
-    base_dir = Path(__file__).resolve().parent.parent
-    model_dir = base_dir / "model"
-    report_dir = base_dir / "report"
-    weights_dir = model_dir / "weights"
-    
-    val_manifest = model_dir / "val_manifest.csv"
-    test_manifest = model_dir / "test_manifest.csv"
-    mapping_file = weights_dir / "label_mapping.json"
-    weights_file = weights_dir / "best_model.pt"
-    
-    if not mapping_file.exists() or not weights_file.exists():
-        raise FileNotFoundError("Model weights or label mapping not found. Run train.py first.")
-        
-    with open(mapping_file, 'r') as f:
-        idx_to_label = json.load(f)
-    
-    # Ensure keys are int for idx_to_label, and reverse for label_to_idx
-    idx_to_label = {int(k): v for k, v in idx_to_label.items()}
-    label_to_idx = {v: k for k, v in idx_to_label.items()}
-    num_classes = len(label_to_idx)
-    
-    val_transform = get_val_transforms()
-    val_dataset = CropDiseaseDataset(val_manifest, label_to_idx, transform=val_transform)
-    test_dataset = CropDiseaseDataset(test_manifest, label_to_idx, transform=val_transform)
-    
-    if args.tiny_subset:
-        val_dataset.df = val_dataset.df.head(args.batch_size)
-        test_dataset.df = test_dataset.df.head(args.batch_size)
-    
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
-    
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
-    
-    model = efficientnet_b0()
-    model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
-    model.load_state_dict(torch.load(weights_file, map_location=device))
-    model = model.to(device)
-    
-    print("Evaluating on Validation Set (PlantVillage)...")
-    val_labels, val_preds = evaluate_model(model, val_loader, device)
-    
-    print("Evaluating on Test Set (PlantDoc)...")
-    test_labels, test_preds = evaluate_model(model, test_loader, device)
-    
-    def get_metrics(y_true, y_pred):
-        mac_p, mac_r, mac_f1, _ = precision_recall_fscore_support(y_true, y_pred, average='macro', zero_division=0, labels=list(range(num_classes)))
-        per_class_p, per_class_r, per_class_f1, _ = precision_recall_fscore_support(y_true, y_pred, average=None, zero_division=0, labels=list(range(num_classes)))
-        return {
-            "macro_precision": float(mac_p),
-            "macro_recall": float(mac_r),
-            "macro_f1": float(mac_f1),
-            "per_class": {
-                idx_to_label[i]: {
-                    "precision": float(per_class_p[i]),
-                    "recall": float(per_class_r[i]),
-                    "f1": float(per_class_f1[i])
-                } for i in range(num_classes)
-            }
-        }
-    
-    results = {
-        "validation_metrics": get_metrics(val_labels, val_preds),
-        "test_metrics": get_metrics(test_labels, test_preds)
-    }
-    
-    with open(report_dir / "metrics.json", "w") as f:
-        json.dump(results, f, indent=4)
-        
-    print(f"\n--- Metrics summary saved to {report_dir / 'metrics.json'} ---")
-    print(f"Validation Macro F1: {results['validation_metrics']['macro_f1']:.4f}")
-    print(f"Test Macro F1:       {results['test_metrics']['macro_f1']:.4f}")
-    
-    # Plot Confusion Matrix for Test Set
-    cm = confusion_matrix(test_labels, test_preds, labels=list(range(num_classes)))
-    plt.figure(figsize=(15, 12))
-    sns.heatmap(cm, annot=False, cmap='Blues', xticklabels=[idx_to_label[i] for i in range(num_classes)], 
-                yticklabels=[idx_to_label[i] for i in range(num_classes)])
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Test Set Confusion Matrix (PlantDoc)')
-    plt.tight_layout()
-    plt.savefig(report_dir / "confusion_matrix.png")
-    print(f"Confusion matrix saved to {report_dir / 'confusion_matrix.png'}")
+    classes = [v for _, v in sorted(
+        json.load(open(WEIGHTS / "label_mapping.json")).items(),
+        key=lambda kv: int(kv[0]))]
+    model = load_model(len(classes))
+
+    paths, labels = [], []
+    for i, c in enumerate(classes):
+        d = Path(args.data) / c
+        if not d.is_dir():
+            raise SystemExit(f"missing class folder: {d}")
+        for p in sorted(d.iterdir())[:args.per_class]:
+            paths.append(p)
+            labels.append(i)
+
+    # Same deterministic split as training
+    y = torch.tensor(labels)
+    perm = torch.randperm(len(y), generator=torch.Generator().manual_seed(0))
+    n_train = int(len(y) * 0.8)
+    val_idx = perm[n_train:].tolist()
+
+    y_true, y_pred = [], []
+    for i in val_idx:
+        with torch.no_grad():
+            logits = model(TF(Image.open(paths[i]).convert("RGB")).unsqueeze(0))
+        y_pred.append(int(logits.argmax(1)))
+        y_true.append(labels[i])
+
+    macro_f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
+    acc = accuracy_score(y_true, y_pred)
+    rep = classification_report(y_true, y_pred, labels=list(range(len(classes))),
+                                target_names=classes, output_dict=True,
+                                zero_division=0)
+    cm = confusion_matrix(y_true, y_pred, labels=list(range(len(classes))))
+
+    out = BASE / "report"
+    out.mkdir(exist_ok=True)
+    json.dump({
+        "split": "PlantVillage held-out validation (20%, seed 0)",
+        "n_images": len(y_true),
+        "n_classes": len(classes),
+        "macro_f1": round(macro_f1, 4),
+        "accuracy": round(acc, 4),
+        "per_class": {k: v for k, v in rep.items() if k in classes},
+    }, open(out / "metrics.json", "w"), indent=2)
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(13, 11))
+    ax.imshow(cm, cmap="Greens")
+    ax.set_xticks(range(len(classes)))
+    ax.set_yticks(range(len(classes)))
+    ax.set_xticklabels(classes, rotation=90, fontsize=7)
+    ax.set_yticklabels(classes, fontsize=7)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.set_title(f"Confusion matrix — held-out validation\n"
+                 f"macro-F1 {macro_f1:.4f}, accuracy {acc:.4f}, n={len(y_true)}")
+    for i in range(len(classes)):
+        for j in range(len(classes)):
+            if cm[i, j]:
+                ax.text(j, i, cm[i, j], ha="center", va="center", fontsize=7)
+    fig.tight_layout()
+    fig.savefig(out / "confusion_matrix.png", dpi=130)
+
+    print(f"macro-F1 {macro_f1:.4f}  accuracy {acc:.4f}  n={len(y_true)}")
+    print(f"wrote {out/'metrics.json'} and {out/'confusion_matrix.png'}")
+
 
 if __name__ == "__main__":
     main()
